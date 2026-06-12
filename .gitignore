@@ -1,0 +1,14 @@
+```text
+# Local Environment Configuration (Contains your private Gemini API key!)
+.env
+
+# Python Virtual Environment dependency folder
+venv/
+
+# Python caching compilations (automatically generated files)
+__pycache__/
+*.pyc
+
+# Operating system metadata files
+.DS_Store
+Thumbs.db
