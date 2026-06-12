@@ -1,115 +1,105 @@
-
+# app.py
 import streamlit as st
-from modules.pdf_parser import extract_text_from_pdf, get_word_count
-from modules.skill_extractor import get_skill_frequency
-from modules.matcher import compute_match, get_score_label
+import pdfplumber
+from dotenv import load_dotenv
+
+# 1. Pipeline Structural Imports
+from modules.skill_extractor import extract_skills, get_skill_frequency
+from modules.matcher import compute_match
+from modules.chart_builder import create_skill_frequency_chart
 from modules.ai_suggestions import get_ai_suggestions
-from modules.chart_builder import create_skill_frequency_chart, create_match_gauge
 
-st.set_page_config(page_title='Resume AI Screener', page_icon='🔍', layout='wide', initial_sidebar_state='collapsed')
+# Load global environment credentials
+load_dotenv()
 
+# Configure uniform workspace layout parameters
+st.set_page_config(
+    page_title="Resume AI Screener & Matrix Dashboard",
+    page_icon="🔍",
+    layout="wide"
+)
 
-st.markdown("""
-<style>
-    main { background-color: #0F172A; }
-    .stApp { background-color: #0F172A; }
-    h1, h2, h3, p, label { color: #E2E8F0 !important; }
-    .stButton>button {
-        background: linear-gradient(135deg, #6366F1, #8B5CF6);
-        color: white; border: none; border-radius: 8px;
-        padding: 0.6rem 2rem; font-size: 1rem; font-weight: 600;
-        width: 100%; transition: all 0.3s;
-    }
-    .stButton>button:hover { opacity: 0.85; transform: translateY(-1px); }
-    .skill-chip {
-        display: inline-block; padding: 4px 12px;
-        border-radius: 20px; margin: 3px; font-size: 0.85rem;
-        font-weight: 500; color: white;
-    }
-</style>
-""", unsafe_allow_html=True)
+st.title("🔍 Resume AI Screener & Alignment Matrix")
+st.markdown("---")
 
-st.markdown('<h1 style="text-align:center;">🔍 Resume AI Screener</h1>', unsafe_allow_html=True)
-st.markdown('<p style="text-align:center; color: #94A3B8;">Upload your resume, paste a target job description, and get instant alignment analytics</p>', unsafe_allow_html=True)
-st.markdown('---')
-
+# 2. Workspace Viewports & Text Container Boundaries
 col1, col2 = st.columns(2)
+
 with col1:
-    st.subheader('📄 Upload Resume')
-    uploaded_file = st.file_uploader('Drop your PDF resume here', type=['pdf'], help='Max file size: 10MB')
-    if uploaded_file:
-        st.success(f"'{uploaded_file.name}' loaded successfully!")
+    st.subheader("📄 Candidate Profile Repository")
+    uploaded_file = st.file_uploader("Upload Target Resume (PDF Format Only)", type=["pdf"])
+    
+    resume_text = ""
+    if uploaded_file is not None:
+        try:
+            with pdfplumber.open(uploaded_file) as pdf:
+                # Loop through pages and extract structural text layers
+                for page in pdf.pages:
+                    text_content = page.extract_text()
+                    if text_content:
+                        resume_text += text_content + "\n"
+            st.success(f"'{uploaded_file.name}' loaded successfully into text buffers!")
+        except Exception as e:
+            st.error(f"PDF Extraction Failure: {str(e)}")
 
 with col2:
-    st.subheader('💼 Job Description')
-    jd_text = st.text_area('Paste the target job details here', height=200, placeholder='Looking for a data professional fluent in Python, SQL...')
+    st.subheader("📋 Target Job Specification Matrix")
+    jd_text = st.text_area("Paste the explicit hiring criteria or role specifications details here:", height=200)
 
-st.markdown('<br>', unsafe_allow_html=True)
-analyse_btn = st.button('Analyze Alignment Matrix', use_container_width=True)
-
-if analyse_btn:
-    if not uploaded_file:
-        st.error('Please upload a resume PDF first!')
-        st.stop()
-    if not jd_text.strip():
-        st.error('Please include a job description profile target!')
-        st.stop()
+# 3. Main Analytical Execution Processing Blocks
+if st.button("Analyze Alignment Matrix", use_container_width=True):
+    if not resume_text:
+        st.warning("Action Required: Please supply a valid candidate resume PDF to initialize scanning parameters.")
+    elif not jd_text:
+        st.warning("Action Required: Please input a destination job profile matrix description to run computations.")
+    else:
+        st.markdown("### 📊 Live Analytics Portfolio Breakdown")
         
-    with st.spinner('Parsing structure variables...'):
-        resume_text = extract_text_from_pdf(uploaded_file)
-        if not resume_text:
-            st.error('Could not extract text. Please ensure the document is not an unflattened image/scan.')
-            st.stop()
-            
-        result = compute_match(resume_text, jd_text)
-        score = result['score']
-        label, color = get_score_label(score)
-        resume_freq = get_skill_frequency(resume_text)
-        suggestions = get_ai_suggestions(resume_text, jd_text, result['missing_skills'], score)
+        # A. RUN THE LINGUISTIC NLP PROCESSING LOOPS
+        # We explicitly name this 'extracted_skills' so all subsequent references map perfectly
+        extracted_skills = extract_skills(resume_text)
+        jd_skills = extract_skills(jd_text)
         
-        st.markdown('---')
-        st.subheader('📊 Processing Matrix Analytics')
+        # B. CALCULATE ALIGNMENT INDICES (SET INTERSECTIONS)
+        # Using standard variable names to hold set properties
+        missing_skills = jd_skills - extracted_skills
+        intersecting_skills = extracted_skills.intersection(jd_skills)
         
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric('Match Percentage Score', f"{score}%")
-        m2.metric('Intersecting Skills Found', len(result['matched_skills']))
-        m3.metric('Identified Gaps Matrix', len(result['missing_skills']))
-        m4.metric('Total File Words Checked', get_word_count(resume_text))
+        # Basic alignment matrix simulation math
+        total_jd_count = len(jd_skills) if len(jd_skills) > 0 else 1
+        alignment_score = round((len(intersecting_skills) / total_jd_count) * 100, 2)
         
-        gauge_col, info_col = st.columns([1, 2])
-        with gauge_col:
-            st.plotly_chart(create_match_gauge(score), use_container_width=True)
-        with info_col:
-            st.markdown(f"### Hierarchy Status: <span style='color:{color};'>{label}</span>", unsafe_allow_html=True)
-            st.markdown(f"Your experience map satisfies **{score}%** of the current target constraints.")
-            
-        st.markdown('---')
-        skills_col1, skills_col2 = st.columns(2)
+        # Display Metric Badges
+        metric_col1, metric_col2, metric_col3 = st.columns(3)
+        metric_col1.metric("Overall Alignment Score", f"{alignment_score}%")
+        metric_col2.metric("Matched Key Competencies", len(intersecting_skills))
+        metric_col3.metric("Highlighted Skill Deficits", len(missing_skills))
         
-        with skills_col1:
-            st.subheader('✅ Intersecting Skills')
-            if result['matched_skills']:
-                chips = ''.join([f'<span class="skill-chip" style="background: #064E3B; color: #6EE7B7">{s}</span>' for s in sorted(result['matched_skills'])])
-                st.markdown(chips, unsafe_allow_html=True)
-            else:
-                st.info('No overlapping technical skills detected.')
-                
-        with skills_col2:
-            st.subheader('⚠️ Missing Skill Alignment')
-            if result['missing_skills']:
-                chips = ''.join([f'<span class="skill-chip" style="background: #450A0A; color: #FCA5A5">{s}</span>' for s in sorted(result['missing_skills'])])
-                st.markdown(chips, unsafe_allow_html=True)
-            else:
-                st.success('Zero skill gaps found relative to this profile!')
-                
-        st.markdown('---')
-        st.subheader('📈 Profile Keyword Distribution densities')
+        st.markdown("---")
+        
+        # C. COMPUTE BALANCED FREQUENCY METRICS (FIXED TWO-ARGUMENT PASS)
+        # We pass both the raw text content AND the matched skills set tracking variables
+        resume_freq = get_skill_frequency(resume_text, extracted_skills)
+        
+        # D. RENDER DYNAMIC VISUAL CHART BARS
         if resume_freq:
-            st.plotly_chart(create_skill_frequency_chart(resume_freq), use_container_width=True)
+            st.markdown("### 📊 Profile Keyword Distribution Densities")
+            # Assumes your custom chart module handles plotting loops natively via Plotly Express
+            chart_fig = create_skill_frequency_chart(resume_freq)
+            st.plotly_chart(chart_fig, use_container_width=True)
         else:
-            st.info('Insufficient quantitative instances to generate distribution profiles.')
+            st.info("Visual Distribution Notice: No structural keyword dataset densities captured over current criteria profiles.")
             
-        st.markdown('---')
-        st.subheader('🤖 Generative Matrix Optimization Advice')
-        with st.expander('View Detailed Optimization Strategies', expanded=True):
-            st.markdown(suggestions)
+        st.markdown("---")
+        
+        # E. LAUNCH DIRECT API HTTPS COACHING ENGINE
+        st.markdown("### 🧠 Generative Matrix Optimization Advice")
+        with st.expander("View Detailed Optimization Strategies", expanded=True):
+            with st.spinner("Authorizing direct secure HTTPS endpoint handshake keys... Generating roadmap..."):
+                coaching_payload = get_ai_suggestions(
+                    resume_text=resume_text,
+                    jd_text=jd_text,
+                    missing_skills=missing_skills,
+                    score=alignment_score
+                )
+                st.markdown(coaching_payload)
