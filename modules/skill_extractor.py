@@ -1,8 +1,7 @@
-# modules/skill_extractor.py
 import spacy
 from data.skills_db import ALL_SKILLS
 
-# Initialize industrial English pipeline globally to conserve runtime memory
+
 nlp = spacy.load('en_core_web_sm')
 
 def extract_skills(text: str) -> set:
@@ -10,12 +9,12 @@ def extract_skills(text: str) -> set:
     text_lower = text.lower()
     found_skills = set()
     
-    # Multi-word/Bigram checks
+
     for skill in ALL_SKILLS:
         if skill in text_lower:
             found_skills.add(skill)
             
-    # Single-word base token verification
+
     doc = nlp(text_lower)
     for token in doc:
         if not token.is_stop and not token.is_punct:

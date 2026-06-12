@@ -1,4 +1,4 @@
-# app.py
+
 import streamlit as st
 from modules.pdf_parser import extract_text_from_pdf, get_word_count
 from modules.skill_extractor import get_skill_frequency
@@ -8,7 +8,7 @@ from modules.chart_builder import create_skill_frequency_chart, create_match_gau
 
 st.set_page_config(page_title='Resume AI Screener', page_icon='🔍', layout='wide', initial_sidebar_state='collapsed')
 
-# Custom Dark Theme Styles
+
 st.markdown("""
 <style>
     main { background-color: #0F172A; }

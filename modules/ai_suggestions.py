@@ -1,4 +1,3 @@
-# modules/ai_suggestions.py
 import os
 from google import genai
 from dotenv import load_dotenv
@@ -11,7 +10,6 @@ def get_ai_suggestions(resume_text: str, jd_text: str, missing_skills: set, scor
     api_key = os.getenv('GEMINI_API_KEY')
     missing_str = ', '.join(missing_skills) if missing_skills else 'None'
     
-    # 1. ATTEMPT LIVE GEMINI CALL
     if api_key and not api_key.startswith("AQ.Your"):
         try:
             client = genai.Client(api_key=api_key)
@@ -23,7 +21,7 @@ def get_ai_suggestions(resume_text: str, jd_text: str, missing_skills: set, scor
             # Silent transition to fallback below if Google's server rejects the key format
             pass
 
-    # 2. SEAMLESS RECOVERY LAYER (Bypasses Google's 400 Key Bug)
+
     skills_list = list(missing_skills) if missing_skills else ["Advanced Data Pipelines", "Cloud Integration"]
     skill1 = skills_list[0] if len(skills_list) > 0 else "Advanced Data Analytics"
     skill2 = skills_list[1] if len(skills_list) > 1 else "Cloud Infrastructure Deployment"

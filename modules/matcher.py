@@ -1,4 +1,3 @@
-# modules/matcher.py
 from modules.skill_extractor import extract_skills
 
 def compute_match(resume_text: str, jd_text: str) -> dict:
